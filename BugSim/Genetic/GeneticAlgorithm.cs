@@ -13,15 +13,17 @@ namespace BugSim.Genetic
         private IParentSelector _parentSelector;
         private double _mutationProbability;
         private Random _random;
+        private bool _keepPrevious;
 
         public List<T> Chromosomes { get; set; }
 
-        public GeneticAlgorithm(IFitnessFunction<T> fitnessFunc, ISurvivorSelector survivorSelector, IParentSelector parentSelector, double mutationProbability, Random random, List<T> chromosomes)
+        public GeneticAlgorithm(IFitnessFunction<T> fitnessFunc, ISurvivorSelector survivorSelector, IParentSelector parentSelector, double mutationProbability, bool keepPrevious, Random random, List<T> chromosomes)
         {
             _fitnessFunc = fitnessFunc;
             _survivorSelector = survivorSelector;
             _parentSelector = parentSelector;
             _mutationProbability = mutationProbability;
+            _keepPrevious = keepPrevious;
             _random = random;
             Chromosomes = chromosomes;
         }
@@ -31,7 +33,9 @@ namespace BugSim.Genetic
             List<T> survivors = _survivorSelector.Select(Chromosomes);
 
             List<Parents<T>> allParents = _parentSelector.Select(survivors);
-            
+
+            if (!_keepPrevious)
+                survivors.Clear();
 
             foreach (var parents in allParents)
             {
@@ -40,13 +44,10 @@ namespace BugSim.Genetic
                 survivors.Add((T)child);
             }
 
-            foreach (T chromosome in survivors)
-                chromosome.Fitness = _fitnessFunc.Test(chromosome);
-
             Chromosomes = survivors;
         }
 
-        public void RunFirstGen()
+        public void RunFitness()
         {
             foreach (T chromosome in Chromosomes)
                 chromosome.Fitness = _fitnessFunc.Test(chromosome);

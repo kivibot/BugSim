@@ -101,32 +101,32 @@ namespace TestApp
 
             List<DoubleChromosome> chromosomes = new List<DoubleChromosome>();
 
-            for (int i = 0; i < 1000; i++)
-            {
-                chromosomes.Add(DoubleChromosome.Random(21, _random));
-            }
+            //for (int i = 0; i < 1000; i++)
+            //{
+            //    chromosomes.Add(DoubleChromosome.Random(21, _random));
+            //}
 
-            GeneticAlgorithm<DoubleChromosome> ga = new GeneticAlgorithm<DoubleChromosome>(new TestFitnessFunction(), new FitnessSurvivorSelector(1000), new RandomParentSelector(2000, _random), 0.0025, _random, chromosomes);
+            //GeneticAlgorithm<DoubleChromosome> ga = new GeneticAlgorithm<DoubleChromosome>(new TestFitnessFunction(), new FitnessSurvivorSelector(1000), new RandomParentSelector(2000, _random), 0.0025, _random, chromosomes);
 
-            ga.RunFirstGen();
+            //ga.RunFitness();
 
-            while (true)
-            {
-                var generation = ga.Chromosomes.OrderBy(a => -a.Fitness).Select(a => a.Fitness).ToList();
+            //while (true)
+            //{
+            //    var generation = ga.Chromosomes.OrderBy(a => -a.Fitness).Select(a => a.Fitness).ToList();
 
-                double med = generation.Skip(generation.Count / 2).First();
+            //    double med = generation.Skip(generation.Count / 2).First();
 
-                Console.WriteLine(generation[0] + " " + med);
+            //    Console.WriteLine(generation[0] + " " + med);
 
-                if (generation[0] > -0.0000005)
-                {
-                    Debugger.Break();
-                    _print = true;
-                }
+            //    if (generation[0] > -0.0000005)
+            //    {
+            //        Debugger.Break();
+            //        _print = true;
+            //    }
 
-                ga.RunOneGeneration();
+            //    ga.RunOneGeneration();
 
-            }
+            //}
 
         }
 
