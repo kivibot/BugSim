@@ -1,5 +1,6 @@
 ﻿using BugSim.Neural;
 using FarseerPhysics.Dynamics;
+using FarseerPhysics.Dynamics.Contacts;
 using FarseerPhysics.Factories;
 using Microsoft.Xna.Framework;
 using System;
@@ -56,7 +57,6 @@ namespace BugSim.Simulation
             _random = random;
 
             _world = new World(Vector2.Zero);
-            _world.ContactManager.OnBroadphaseCollision += HandleCollision;
             foreach (Bug bug in bugs)
             {
                 Body body = BodyFactory.CreateBody(_world);
@@ -66,6 +66,7 @@ namespace BugSim.Simulation
                 SimBug simBug = new SimBug(bug);
                 Fixture fixture = FixtureFactory.AttachCircle((float)bug.Radius, 1.0f, body, simBug);
                 simBug.Fixture = fixture;
+                fixture.OnCollision += HandleCollision;
                 _bugs.Add(simBug);
             }
         }
@@ -86,25 +87,26 @@ namespace BugSim.Simulation
             _foods.Add(simFood);
         }
 
-        private void HandleCollision(ref FixtureProxy fp1, ref FixtureProxy fp2)
+        private bool HandleCollision(Fixture fix1, Fixture fix2, Contact contact)
         {
             SimFood food;
             SimBug bug;
-            if (fp1.Fixture.UserData is SimFood && fp2.Fixture.UserData is SimBug)
+            if (fix1.UserData is SimFood && fix2.UserData is SimBug)
             {
-                food = (SimFood)fp1.Fixture.UserData;
-                bug = (SimBug)fp2.Fixture.UserData;
+                food = (SimFood)fix1.UserData;
+                bug = (SimBug)fix2.UserData;
             }
-            else if (fp2.Fixture.UserData is SimFood && fp1.Fixture.UserData is SimBug)
+            else if (fix2.UserData is SimFood && fix1.UserData is SimBug)
             {
-                food = (SimFood)fp2.Fixture.UserData;
-                bug = (SimBug)fp1.Fixture.UserData;
+                food = (SimFood)fix2.UserData;
+                bug = (SimBug)fix1.UserData;
             }
             else
             {
-                return;
+                return true;
             }
             EatFood(bug, food);
+            return false;
         }
 
         private void EatFood(SimBug bug, SimFood food)
@@ -135,16 +137,38 @@ namespace BugSim.Simulation
                     Vector2 toPoint = new Vector2((float)(bug.X + Math.Cos(bug.Rotation + sensor.Rotation) * sensor.MaxLength), (float)(bug.Y + Math.Sin(bug.Rotation + sensor.Rotation) * sensor.MaxLength));
 
                     double minFraction = 1;
+                    Fixture minFix = null;
 
                     _world.RayCast((fix, point, normal, fraction) =>
                     {
                         if (fixture == fix)
                             return -1;
                         minFraction = fraction;
+                        minFix = fix;
                         return fraction;
                     }, new Vector2((float)bug.X, (float)bug.Y), toPoint);
 
-                    sensor.Length = minFraction * sensor.MaxLength;
+                    Vector3 vec = new Vector3(0, 0, 0);
+
+                    if (minFix != null)
+                    {
+                        if (minFix.UserData is SimBug)
+                        {
+                            var trg = minFix.UserData as SimBug;
+                            vec = new Vector3((float)trg.Bug.Red, (float)trg.Bug.Green, (float)trg.Bug.Blue);
+                        }
+                        else if (minFix.UserData is SimFood)
+                        {
+                            var trg = minFix.UserData as SimFood;
+                            vec = new Vector3((float)trg.Food.R, (float)trg.Food.G, (float)trg.Food.B);
+                        }
+                    }
+
+                    sensor.Length = minFraction * sensor.MaxLength * sensor.A
+                        + minFraction * sensor.MaxLength * sensor.R * vec.X
+                        + minFraction * sensor.MaxLength * sensor.G * vec.Y
+                        + minFraction * sensor.MaxLength * sensor.B * vec.Z;
+
 
                     input[i] = sensor.Length;
                 }
@@ -156,9 +180,9 @@ namespace BugSim.Simulation
                 bug.AngularPower = output[1];
                 bug.Memory0 = output[2];
 
-                bug.Red = output[3];
-                bug.Green = output[4];
-                bug.Blue = output[5];
+                bug.Red = output[3] / 2.0 + 0.5;
+                bug.Green = output[4] / 2.0 + 0.5;
+                bug.Blue = output[5] / 2.0 + 0.5;
 
                 fixture.Body.Rotation = (float)bug.Rotation;
 
@@ -172,6 +196,7 @@ namespace BugSim.Simulation
                 bug.Rotation = fixture.Body.Rotation;
                 bug.X = fixture.Body.Position.X;
                 bug.Y = fixture.Body.Position.Y;
+                bug.Radius = 0.05f + Math.Max(0, Math.Log10(bug.Score)) * 0.01;
             }
         }
 

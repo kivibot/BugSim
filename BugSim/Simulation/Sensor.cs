@@ -12,10 +12,19 @@ namespace BugSim.Simulation
         public double Length { get; set; }
         public double MaxLength { get; private set; }
 
-        public Sensor(double rotation, double max)
+        public double A { get; set; }
+        public double R { get; set; }
+        public double G { get; set; }
+        public double B { get; set; }
+
+        public Sensor(double rotation, double max, double a, double r, double g, double b)
         {
             this.Rotation = rotation;
             this.MaxLength = max;
+            A = a;
+            R = r;
+            G = g;
+            B = b;
         }
     }
 }

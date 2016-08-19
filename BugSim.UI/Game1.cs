@@ -48,8 +48,8 @@ namespace BugSim.UI
         /// </summary>
         protected override void Initialize()
         {
-            for (int i = 0; i < 20; i++)
-                _chromosomes.Add(DoubleChromosome.Random(84, _random));
+            for (int i = 0; i < 50; i++)
+                _chromosomes.Add(DoubleChromosome.Random(102, _random));
 
             _form.Show();
 
@@ -75,18 +75,21 @@ namespace BugSim.UI
         private Bug BugFromChromosome(double x, double y, DoubleChromosome chromosome)
         {
             int index = 0;
-            Network nn = new Network(LayerFromArray(chromosome.Data, ref index, 6, 6, new TanhActivationFunction()), LayerFromArray(chromosome.Data, ref index, 6, 6, new ClampingActivationFunction()));
+            Network nn = new Network(LayerFromArray(chromosome.Data, ref index, 9, 6, new TanhActivationFunction()), LayerFromArray(chromosome.Data, ref index, 6, 6, new ClampingActivationFunction()));
             return new Bug() { X = x, Y = y, Radius = 0.05, Network = nn, Sensors = CreateSensors() };
         }
 
         private List<Sensor> CreateSensors()
         {
             List<Sensor> sensors = new List<Sensor>();
-            sensors.Add(new Sensor(-Math.PI / 4, 1));
-            sensors.Add(new Sensor(-Math.PI / 8, 1));
-            sensors.Add(new Sensor(0, 1));
-            sensors.Add(new Sensor(Math.PI / 8, 1));
-            sensors.Add(new Sensor(Math.PI / 4, 1));
+            sensors.Add(new Sensor(-Math.PI / 4, 1, 1, 0, 0, 0));
+            sensors.Add(new Sensor(-Math.PI / 8, 1, 1, 0, 0, 0));
+            sensors.Add(new Sensor(0, 1, 1, 0, 0, 0));
+            sensors.Add(new Sensor(0, 1, 0, 1, 0, 0));
+            sensors.Add(new Sensor(0, 1, 0, 0, 1, 0));
+            sensors.Add(new Sensor(0, 1, 0, 0, 0, 1));
+            sensors.Add(new Sensor(Math.PI / 8, 1, 1, 0, 0, 0));
+            sensors.Add(new Sensor(Math.PI / 4, 1, 1, 0, 0, 0));
 
             return sensors;
         }
@@ -135,7 +138,7 @@ namespace BugSim.UI
                         _chromosomes[j].Fitness = _bugs[j].Score;
                     }
 
-                    GeneticAlgorithm<DoubleChromosome> ga = new GeneticAlgorithm<DoubleChromosome>(new DummyFitnessFunction<DoubleChromosome>(), new FitnessSurvivorSelector(5), new RandomParentSelector(10, _random), 0.0125, true, _random, _chromosomes);
+                    GeneticAlgorithm<DoubleChromosome> ga = new GeneticAlgorithm<DoubleChromosome>(new DummyFitnessFunction<DoubleChromosome>(), new FitnessSurvivorSelector(20), new RandomParentSelector(30, _random), 0.0125, true, _random, _chromosomes);
 
 
                     ga.RunOneGeneration();
@@ -191,8 +194,8 @@ namespace BugSim.UI
             double radius = _sizeRatio * bug.Radius;
             DrawCircle(x, y, radius, new Color((float)bug.Red, (float)bug.Green, (float)bug.Blue));
             DrawCircle(x, y, radius - 2, new Color((float)Math.Log10(bug.Score) / 2f, 0f, 0f));
-            foreach (Sensor sensor in bug.Sensors)
-                DrawSensor(sensor, bug);
+            //foreach (Sensor sensor in bug.Sensors)
+            //    DrawSensor(sensor, bug);
         }
 
         private void DrawLine(double x0, double y0, double x1, double y1, int width, Color color)
@@ -237,7 +240,7 @@ namespace BugSim.UI
             double x = _sizeRatio * food.X;
             double y = _sizeRatio * food.Y;
             double radius = _sizeRatio * food.Radius;
-            DrawCircle(x, y, radius, Color.Lime);
+            DrawCircle(x, y, radius, new Color((float)food.R, (float)food.G, (float)food.B));
         }
 
         public Layer LayerFromArray(double[] weights, ref int pos, int inputs, int outputs, IActivationFunction func)
