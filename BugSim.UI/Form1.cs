@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace BugSim.UI
 {
@@ -17,11 +18,14 @@ namespace BugSim.UI
         public int Step { get; set; }
         public int MaxSteps { get; set; }
 
+        public IEnumerable<double> Scores { get; set; }
+
         public Form1()
         {
             InitializeComponent();
             Speed = tbSpeed.Value;
             pbSteps.Minimum = 0;
+            Scores = new List<double>();
         }
 
         private void tbSpeed_ValueChanged(object sender, EventArgs e)
@@ -34,6 +38,15 @@ namespace BugSim.UI
             lblGen.Text = "Generation: " + Gen;
             pbSteps.Maximum = MaxSteps;
             pbSteps.Value = Step;
+            var series = fitnessChart.Series[0];
+            series.Points.Clear();
+            double max = Scores.Any() ? Scores.Max() : 0;
+            if (max == 0)
+                max = 1;
+            foreach (var grp in Scores.Select(s => Math.Floor(max * Math.Floor(s / max * 15.0) / 15.0)).GroupBy(s => s))
+            {
+                series.Points.Add(new DataPoint(grp.Key, grp.Count()));
+            }
         }
     }
 }

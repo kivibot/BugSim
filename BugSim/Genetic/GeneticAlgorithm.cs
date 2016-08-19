@@ -13,17 +13,15 @@ namespace BugSim.Genetic
         private IParentSelector _parentSelector;
         private double _mutationProbability;
         private Random _random;
-        private bool _keepPrevious;
 
         public List<T> Chromosomes { get; set; }
 
-        public GeneticAlgorithm(IFitnessFunction<T> fitnessFunc, ISurvivorSelector survivorSelector, IParentSelector parentSelector, double mutationProbability, bool keepPrevious, Random random, List<T> chromosomes)
+        public GeneticAlgorithm(IFitnessFunction<T> fitnessFunc, ISurvivorSelector survivorSelector, IParentSelector parentSelector, double mutationProbability, Random random, List<T> chromosomes)
         {
             _fitnessFunc = fitnessFunc;
             _survivorSelector = survivorSelector;
             _parentSelector = parentSelector;
             _mutationProbability = mutationProbability;
-            _keepPrevious = keepPrevious;
             _random = random;
             Chromosomes = chromosomes;
         }
@@ -32,11 +30,8 @@ namespace BugSim.Genetic
         {
             List<T> survivors = _survivorSelector.Select(Chromosomes);
 
-            List<Parents<T>> allParents = _parentSelector.Select(survivors);
-
-            if (!_keepPrevious)
-                survivors.Clear();
-
+            List<Parents<T>> allParents = _parentSelector.Select(Chromosomes);
+            
             foreach (var parents in allParents)
             {
                 var child = parents.ParentA.Crossover(parents.ParentB, _random);

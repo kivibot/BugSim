@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BugSim.UI
 {
@@ -138,7 +139,7 @@ namespace BugSim.UI
                         _chromosomes[j].Fitness = _bugs[j].Score;
                     }
 
-                    GeneticAlgorithm<DoubleChromosome> ga = new GeneticAlgorithm<DoubleChromosome>(new DummyFitnessFunction<DoubleChromosome>(), new FitnessSurvivorSelector(20), new RandomParentSelector(30, _random), 0.0125, true, _random, _chromosomes);
+                    GeneticAlgorithm<DoubleChromosome> ga = new GeneticAlgorithm<DoubleChromosome>(new DummyFitnessFunction<DoubleChromosome>(), new FitnessSurvivorSelector(15), new FitnessWeightedParentSelector(30, _random), 0.0125, _random, _chromosomes);
 
 
                     ga.RunOneGeneration();
@@ -151,6 +152,7 @@ namespace BugSim.UI
                 _form.Step = _currentStep;
                 _form.Gen = _currentGen;
                 _form.MaxSteps = _maxSteps;
+                _form.Scores = _bugs.Select(b => b.Score);
 
                 // Console.WriteLine(String.Format("Current Step {0}/{1} {2}%", _currentStep, _maxSteps, 100.0 * _currentStep / _maxSteps));
 

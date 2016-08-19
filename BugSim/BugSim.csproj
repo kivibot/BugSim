@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Genetic\DummyFitnessFunction.cs" />
+    <Compile Include="Genetic\FitnessWeightedParentSelector.cs" />
     <Compile Include="Neural\ClampingActivationFunction.cs" />
     <Compile Include="Simulation\Bug.cs" />
     <Compile Include="Simulation\BugSimulation.cs" />
