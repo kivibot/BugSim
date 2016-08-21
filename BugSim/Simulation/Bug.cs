@@ -24,9 +24,14 @@ namespace BugSim.Simulation
         public double Score { get; set; }
 
         public double Memory0 { get; set; }
+        public double Memory1 { get; set; }
+        public double Memory2 { get; set; }
 
         public double Red { get; set; }
         public double Green { get; set; }
         public double Blue { get; set; }
+
+        public double Health { get; set; }
+        public double Energy { get; set; }
     }
 }

@@ -17,7 +17,7 @@ namespace BugSim.Genetic
 
         public List<T> Select<T>(List<T> candidates) where T : IChromosome
         {
-            return candidates.OrderBy(a => -a.Fitness).Take(_survivorCount).ToList();
+            return candidates.Where(c => c.Fitness > 0).OrderBy(a => -a.Fitness).Take(_survivorCount).ToList();
         }
     }
 }

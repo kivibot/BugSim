@@ -44,6 +44,10 @@ namespace BugSim.Simulation
 
         private double _foodCounter;
 
+        private double _drainRate = 0.02;
+        private double _damageRate = 0.03;
+        private double _energyPerFoor = 0.2;
+
         private List<SimBug> _bugs = new List<SimBug>();
         private List<SimFood> _foods = new List<SimFood>();
 
@@ -59,6 +63,11 @@ namespace BugSim.Simulation
             _world = new World(Vector2.Zero);
             foreach (Bug bug in bugs)
             {
+                SpawnFood();
+
+                bug.Health = 1;
+                bug.Energy = 0.3;
+
                 Body body = BodyFactory.CreateBody(_world);
                 body.BodyType = BodyType.Dynamic;
                 body.Position = new Vector2((float)bug.X, (float)bug.Y);
@@ -71,16 +80,18 @@ namespace BugSim.Simulation
             }
         }
 
-        private void SpawnFood()
+        private void SpawnFood(double? x = null, double? y = null)
         {
-            double x = _random.NextDouble() * 12.8;
-            double y = _random.NextDouble() * 7.2;
-            Food food = new Food(x, y, 0.05);
+            if (!x.HasValue)
+                x = _random.NextDouble() * 12.8;
+            if (!y.HasValue)
+                y = _random.NextDouble() * 7.2;
+            Food food = new Food(x.Value, y.Value, 0.05);
             SimFood simFood = new SimFood(food);
 
             Body body = BodyFactory.CreateBody(_world);
             body.Position = new Vector2((float)food.X, (float)food.Y);
-            Fixture fixture = FixtureFactory.AttachCircle((float)food.Radius, 1.0f, body, simFood);
+            Fixture fixture = FixtureFactory.AttachCircle((float)food.Radius, 2.0f, body, simFood);
 
             simFood.Fixture = fixture;
 
@@ -112,6 +123,7 @@ namespace BugSim.Simulation
         private void EatFood(SimBug bug, SimFood food)
         {
             bug.Bug.Score += 1;
+            bug.Bug.Energy = Math.Min(1, bug.Bug.Energy + _energyPerFoor);
             food.Fixture.Body.Dispose();
             _foods.Remove(food);
         }
@@ -123,13 +135,36 @@ namespace BugSim.Simulation
             {
                 SpawnFood();
             }
+            List<SimBug> deleted = new List<SimBug>();
             foreach (SimBug simBug in _bugs)
             {
                 Bug bug = simBug.Bug;
+
+                bug.Energy = Math.Max(0, bug.Energy - step * _drainRate / 2.0);
+                if (bug.Energy == 0)
+                {
+                    bug.Health -= step * _damageRate;
+                    if (bug.Health < 0)
+                    {
+                        bug.Score = 0;
+                        simBug.Fixture.Body.Dispose();
+                        deleted.Add(simBug);
+                        SpawnFood(bug.X, bug.Y);
+                        continue;
+                    }
+                }
+            }
+
+            foreach (var bug in deleted)
+                _bugs.Remove(bug);
+            foreach (SimBug simBug in _bugs)
+            {
+                Bug bug = simBug.Bug;
+
                 Fixture fixture = simBug.Fixture;
                 bug.Rotation += (float)(step * _angularFactor * bug.AngularPower);
 
-                double[] input = new double[bug.Sensors.Count + 1];
+                double[] input = new double[bug.Sensors.Count + 3];
                 for (int i = 0; i < bug.Sensors.Count; i++)
                 {
                     Sensor sensor = bug.Sensors[i];
@@ -165,20 +200,29 @@ namespace BugSim.Simulation
                     }
 
                     sensor.Length = minFraction * sensor.MaxLength * sensor.A
-                        + minFraction * sensor.MaxLength * sensor.R * vec.X
-                        + minFraction * sensor.MaxLength * sensor.G * vec.Y
-                        + minFraction * sensor.MaxLength * sensor.B * vec.Z;
+                        + sensor.MaxLength * sensor.R * (1.0 - vec.X)
+                        + sensor.MaxLength * sensor.G * (1.0 - vec.Y)
+                        + sensor.MaxLength * sensor.B * (1.0 - vec.Z);
 
 
-                    input[i] = sensor.Length;
+                    input[i] = 1.0 - (sensor.Length / sensor.MaxLength);
                 }
 
-                input[input.Length - 1] = bug.Memory0;
+                input[input.Length - 5] = bug.Memory0;
+                input[input.Length - 4] = bug.Memory1;
+                input[input.Length - 3] = bug.Memory2;
+                input[input.Length - 2] = bug.Health;
+                input[input.Length - 1] = bug.Energy;
 
                 double[] output = bug.Network.Activate(input);
                 bug.ForwardPower = Math.Max(0, output[0]);
+
+                bug.Energy -= step * bug.ForwardPower * _drainRate;
+
                 bug.AngularPower = output[1];
                 bug.Memory0 = output[2];
+                bug.Memory1 = output[6];
+                bug.Memory2 = output[7];
 
                 bug.Red = output[3] / 2.0 + 0.5;
                 bug.Green = output[4] / 2.0 + 0.5;
