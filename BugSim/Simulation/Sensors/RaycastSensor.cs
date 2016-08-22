@@ -27,9 +27,9 @@ namespace BugSim.Simulation.Sensors
 
         public double[] GetValues(World world, Bug bug)
         {
-            Vector2 startPoint = new Vector2((float)bug.X, (float)bug.Y);
-            Vector2 endPoint = new Vector2((float)(bug.X + Math.Cos(bug.Rotation + _rotation) * _maxLength),
-                (float)(bug.Y + Math.Sin(bug.Rotation + _rotation) * _maxLength));
+            Vector2 startPoint = new Vector2((float)bug.Position.X, (float)bug.Position.Y);
+            Vector2 endPoint = new Vector2((float)(bug.Position.X + Math.Cos(bug.Rotation + _rotation) * _maxLength),
+                (float)(bug.Position.Y + Math.Sin(bug.Rotation + _rotation) * _maxLength));
 
             double minFraction = 1;
             Fixture targetFixture = null;

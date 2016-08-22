@@ -8,10 +8,8 @@ using System.Threading.Tasks;
 
 namespace BugSim.Simulation
 {
-    public class Food : IColored
+    public class Food : WorldObject, IColored
     {
-        public double X { get; private set; }
-        public double Y { get; private set; }
         public double Radius { get; private set; }
 
         public double Red { get; private set; }
@@ -20,10 +18,9 @@ namespace BugSim.Simulation
 
         public Body Body { get; set; }
 
-        public Food(double x, double y, double radius)
+        public Food(Body body, double radius)
+            : base(body)
         {
-            this.X = x;
-            this.Y = y;
             this.Radius = radius;
             this.Red = 0;
             this.Green = 1;

@@ -1,6 +1,7 @@
 ﻿using BugSim.Genetic;
 using BugSim.Neural;
 using BugSim.Simulation;
+using BugSim.Simulation.Sensors;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -24,7 +25,6 @@ namespace BugSim.UI
 
         private BugSimulation _simulation;
         private List<DoubleChromosome> _chromosomes = new List<DoubleChromosome>();
-        private List<Bug> _bugs = new List<Bug>();
 
         private int _currentStep = 0;
         private int _maxSteps = 10000;
@@ -64,35 +64,32 @@ namespace BugSim.UI
         {
             _currentGen++;
             Console.WriteLine("Generation: " + _currentGen);
-            _bugs.Clear();
             _currentStep = 0;
+
+            _simulation = new BugSimulation(_random);
+
             for (int i = 0; i < _chromosomes.Count; i++)
-                _bugs.Add(BugFromChromosome(_random.NextDouble() * 12.8, _random.NextDouble() * 7.2, _chromosomes[i]));
+                BugFromChromosome( _chromosomes[i]);
 
 
-            _simulation = new BugSimulation(_bugs, 10, 3, 2, _random);
         }
 
-        private Bug BugFromChromosome(double x, double y, DoubleChromosome chromosome)
+        private void BugFromChromosome(DoubleChromosome chromosome)
         {
             int index = 0;
             Network nn = new Network(LayerFromArray(chromosome.Data, ref index, 13, 26, new TanhActivationFunction()), 
                 LayerFromArray(chromosome.Data, ref index, 26, 26, new TanhActivationFunction()), 
                 LayerFromArray(chromosome.Data, ref index, 26, 8, new ClampingActivationFunction()));
-            return new Bug() { X = x, Y = y, Radius = 0.05, Network = nn, Sensors = CreateSensors() };
+            _simulation.CreateBug(CreateSensors(), nn);
         }
 
-        private List<Sensor> CreateSensors()
+        private List<ISensor> CreateSensors()
         {
-            List<Sensor> sensors = new List<Sensor>();
-            sensors.Add(new Sensor(-Math.PI / 4, 1, 1, 0, 0, 0));
-            sensors.Add(new Sensor(-Math.PI / 8, 1, 1, 0, 0, 0));
-            sensors.Add(new Sensor(0, 1, 1, 0, 0, 0));
-            sensors.Add(new Sensor(0, 1, 0, 1, 0, 0));
-            sensors.Add(new Sensor(0, 1, 0, 0, 1, 0));
-            sensors.Add(new Sensor(0, 1, 0, 0, 0, 1));
-            sensors.Add(new Sensor(Math.PI / 8, 1, 1, 0, 0, 0));
-            sensors.Add(new Sensor(Math.PI / 4, 1, 1, 0, 0, 0));
+            List<ISensor> sensors = new List<ISensor>();
+
+            sensors.Add(new RaycastSensor(-Math.PI / 4, 1, false));
+            sensors.Add(new RaycastSensor(0, 1, true));
+            sensors.Add(new RaycastSensor(Math.PI / 4, 1, false));
 
             return sensors;
         }
@@ -133,28 +130,28 @@ namespace BugSim.UI
 
             for (int i = 0; i < _form.Speed; i++)
             {
-                if (_currentStep == _maxSteps || _simulation.GetBugs().Count() < 5)
-                {
+                //    if (_currentStep == _maxSteps || _simulation.GetBugs().Count() < 5)
+                //    {
 
-                    for (int j = 0; j < _chromosomes.Count; j++)
-                    {
-                        _chromosomes[j].Fitness = _bugs[j].Score;
-                    }
+                //        for (int j = 0; j < _chromosomes.Count; j++)
+                //        {
+                //            //_chromosomes[j].Fitness = _bugs[j].Score;
+                //        }
 
-                    GeneticAlgorithm<DoubleChromosome> ga = new GeneticAlgorithm<DoubleChromosome>(new DummyFitnessFunction<DoubleChromosome>(), new FitnessSurvivorSelector(15), new FitnessWeightedParentSelector(85, _random), 0.0125, _random, _chromosomes);
+                //        GeneticAlgorithm<DoubleChromosome> ga = new GeneticAlgorithm<DoubleChromosome>(new DummyFitnessFunction<DoubleChromosome>(), new FitnessSurvivorSelector(15), new FitnessWeightedParentSelector(85, _random), 0.0125, _random, _chromosomes);
 
 
-                    ga.RunOneGeneration();
+                //        ga.RunOneGeneration();
 
-                    _chromosomes = ga.Chromosomes;
+                //        _chromosomes = ga.Chromosomes;
 
-                    StartNewSim();
-                }
+                //        StartNewSim();
+                //    }
 
                 _form.Step = _currentStep;
                 _form.Gen = _currentGen;
                 _form.MaxSteps = _maxSteps;
-                _form.Scores = _bugs.Select(b => b.Score);
+                //_form.Scores = _bugs.Select(b => b.Score);
 
                 // Console.WriteLine(String.Format("Current Step {0}/{1} {2}%", _currentStep, _maxSteps, 100.0 * _currentStep / _maxSteps));
 
@@ -175,9 +172,9 @@ namespace BugSim.UI
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
             _spriteBatch.Begin();
-            foreach (Food food in _simulation.GetFoods())
+            foreach (Food food in _simulation.Foods)
                 DrawFood(food);
-            foreach (Bug bug in _bugs)
+            foreach (Bug bug in _simulation.Bugs)
             {
                 if (bug.Health > 0)
                     DrawBug(bug);
@@ -194,8 +191,8 @@ namespace BugSim.UI
 
         private void DrawBug(Bug bug)
         {
-            double x = _sizeRatio * bug.X;
-            double y = _sizeRatio * bug.Y;
+            double x = _sizeRatio * bug.Position.X;
+            double y = _sizeRatio * bug.Position.Y;
             double radius = _sizeRatio * bug.Radius;
             DrawCircle(x, y, radius, new Color((float)bug.Red, (float)bug.Green, (float)bug.Blue));
             DrawCircle(x, y, radius - 2, new Color(1f - (float)bug.Energy, (float)bug.Health, 0f));
@@ -235,17 +232,17 @@ namespace BugSim.UI
             return new Layer(modules);
         }
 
-        private void DrawSensor(Sensor sensor, Bug bug)
-        {
-            DrawLineFrom(bug.X * _sizeRatio, bug.Y * _sizeRatio, bug.Rotation + sensor.Rotation, _sizeRatio * sensor.Length, 1, Color.Red);
-        }
+        //private void DrawSensor(Sensor sensor, Bug bug)
+        //{
+        //    DrawLineFrom(bug.X * _sizeRatio, bug.Y * _sizeRatio, bug.Rotation + sensor.Rotation, _sizeRatio * sensor.Length, 1, Color.Red);
+        //}
 
         private void DrawFood(Food food)
         {
-            double x = _sizeRatio * food.X;
-            double y = _sizeRatio * food.Y;
+            double x = _sizeRatio * food.Position.X;
+            double y = _sizeRatio * food.Position.Y;
             double radius = _sizeRatio * food.Radius;
-            DrawCircle(x, y, radius, new Color((float)food.R, (float)food.G, (float)food.B));
+            DrawCircle(x, y, radius, new Color((float)food.Red, (float)food.Green, (float)food.Blue));
         }
 
         public Layer LayerFromArray(double[] weights, ref int pos, int inputs, int outputs, IActivationFunction func)

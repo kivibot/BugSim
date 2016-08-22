@@ -15,16 +15,11 @@ namespace BugSim.Simulation
     {
         private World _world;
 
-        private double _forwardFactor;
-        private double _angularFactor;
+        private double _worldWidth = 12;
+        private double _worldHeight = 7;
 
-        private double _foodSpawnSpeed;
-
-        private double _foodCounter;
-
-        private double _drainRate = 0.02;
-        private double _damageRate = 0.03;
-        private double _energyPerFoor = 0.2;
+        private double _foodRadius = 0.05;
+        private double _bugRadius = 0.05;
 
         private double _initialHealth = 1;
         private double _initialEnergy = 0.3;
@@ -32,53 +27,64 @@ namespace BugSim.Simulation
         private List<Bug> _bugs = new List<Bug>();
         private List<Food> _foods = new List<Food>();
 
+
+        private double _forwardFactor = 3;
+        private double _angularFactor = 3;
+
+        private double _foodSpawnSpeed = 3;
+        private double _foodCounter = 0;
+
+        private double _drainRate = 0.02;
+        private double _damageRate = 0.03;
+        private double _energyPerFoor = 0.2;
+
+
+
         private Random _random;
 
-        public BugSimulation(List<Bug> bugs, double forwardFactor, double angularFactor, double foodSpawnSpeed, Random random)
+        public BugSimulation(Random random)
         {
-            _forwardFactor = forwardFactor;
-            _angularFactor = angularFactor;
-            _foodSpawnSpeed = foodSpawnSpeed;
             _random = random;
-
             _world = new World(Vector2.Zero);
-            foreach (Bug bug in bugs)
-            {
-                SpawnFood();
-
-                bug.Health = _initialHealth;
-                bug.Energy = _initialEnergy;
-
-                Body body = BodyFactory.CreateBody(_world, new Vector2((float)bug.X, (float)bug.Y), 0, bug);
-                body.BodyType = BodyType.Dynamic;
-                body.FixedRotation = true;
-                Fixture fixture = FixtureFactory.AttachCircle((float)bug.Radius, 1.0f, body, bug);
-
-                bug.Body = body;
-
-                _bugs.Add(bug);
-            }
         }
 
-        private void SpawnFood()
+        public void CreateFood()
         {
-
+            double x = _random.NextDouble() * _worldWidth;
+            double y = _random.NextDouble() * _worldHeight;
+            Body body = BodyFactory.CreateCircle(_world, (float)_foodRadius, 1, new Vector2((float)x, (float)y));
+            body.BodyType = BodyType.Static;
+            Food food = new Food(body, _foodRadius);
+            body.UserData = food;
+            _foods.Add(food);
         }
 
-        private void EatFood(SimBug bug, SimFood food)
+
+        public void CreateBug(List<ISensor> sensors, Network network)
         {
-            bug.Bug.Score += 1;
-            bug.Bug.Energy = Math.Min(1, bug.Bug.Energy + _energyPerFoor);
-            food.Fixture.Body.Dispose();
-            _foods.Remove(food);
+            double x = _random.NextDouble() * _worldWidth;
+            double y = _random.NextDouble() * _worldHeight;
+            Body body = BodyFactory.CreateCircle(_world, (float)_bugRadius, 1, new Vector2((float)x, (float)y));
+            body.BodyType = BodyType.Dynamic;
+            body.FixedRotation = true;
+            Bug bug = new Bug(sensors, network, body, _bugRadius, _initialHealth, _initialEnergy, _forwardFactor, _angularFactor);
+            _bugs.Add(bug);
         }
 
         public void SimulateStep(double step)
         {
-            _bugs.RemoveAll(bug => bug.Simulate(_world));
+            _foodCounter += _foodSpawnSpeed;
+            for (; _foodCounter >= 0; _foodCounter -= 1)
+                CreateFood();
+
+
+            _bugs.RemoveAll(bug => bug.Simulate(_world, step));
 
             _world.Step((float)step);
         }
+
+        public IEnumerable<Bug> Bugs { get { return _bugs; } }
+        public IEnumerable<Food> Foods { get { return _foods; } }
 
     }
 }
